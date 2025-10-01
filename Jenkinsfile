@@ -44,7 +44,7 @@ pipeline {
            }
         }
    
-        stage('Build Docker Image') {
+        stage('Build Docker Image and Push to Dockerhub') {
              agent {
                 docker {
                     image 'docker:24'
@@ -53,16 +53,8 @@ pipeline {
             }
             steps {
                 sh 'docker build -t $DOCKER_HUB_USER/$IMAGE_NAME:$TAG .'
-            }
-        }
-        stage('Docker login and push image') {
-            steps {
-			script {
-			// Login using stored credentials
-			sh 'echo $DOCKER_HUB_PASSWORD | docker login -u $DOCKER_HUB_USER --password-stdin'
-			sh 'docker push $DOCKER_HUB_USER/$IMAGE_NAME:$TAG'
-                }
-
+				sh 'echo $DOCKER_HUB_PASSWORD | docker login -u $DOCKER_HUB_USER --password-stdin'
+				sh 'docker push $DOCKER_HUB_USER/$IMAGE_NAME:$TAG'
             }
         }
     }
