@@ -4,7 +4,7 @@ pipeline {
         SNYK_TOKEN = credentials('SNYK_TOKEN')
         DOCKER_HUB_PASSWORD = credentials('DOCKER_HUB_PASSWORD') // Docker Hub password stored in Jenkins credentials manager
         DOCKER_HUB_USER = "bibeki07"
-        IMAGE_NAME = "assignment2-test"
+        IMAGE_NAME = "assignment2"
         TAG = "initial"
     }
     options {
@@ -81,7 +81,9 @@ pipeline {
     post {
         always {
             echo "=== Build Complete: Archiving logs and results ==="
-            archiveArtifacts artifacts: '**/*.log', allowEmptyArchive: true // Archive logs
+            node {
+                archiveArtifacts artifacts: '**/*.log', allowEmptyArchive: true // Archive logs safely
+            }
         }
     }
 }
