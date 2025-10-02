@@ -81,8 +81,10 @@ pipeline {
     post {
         always {
             echo "=== Build Complete: Archiving logs and results ==="
-            node {
-                archiveArtifacts artifacts: '**/*.log', allowEmptyArchive: true // Archive logs safely
+            script {
+                node('master') {   // Use the label you added
+                    archiveArtifacts artifacts: '**/*.log', allowEmptyArchive: true
+                }
             }
         }
     }
