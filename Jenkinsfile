@@ -1,4 +1,4 @@
-ipipeline {
+pipeline {
     agent none // We will define agents per stage
     environment {
         SNYK_TOKEN = credentials('SNYK_TOKEN')
