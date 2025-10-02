@@ -1,5 +1,5 @@
 pipeline {
-    agent none // We will define agents per stage
+    agent none
     environment {
         SNYK_TOKEN = credentials('SNYK_TOKEN')
         DOCKER_HUB_PASSWORD = credentials('DOCKER_HUB_PASSWORD') // Docker Hub password stored in Jenkins credentials manager
@@ -8,82 +8,73 @@ pipeline {
         TAG = "initial"
     }
     options {
-        buildDiscarder(logRotator(daysToKeepStr: '30', numToKeepStr: '20')) // Store logs for 30 days or 20 builds
+        buildDiscarder(logRotator(daysToKeepStr: '30', numToKeepStr: '20')) // Retain logs for 30 days / 20 builds
         timestamps() // Add timestamps to console logs
     }
     stages {
         // Install NodeJS dependencies in package.json using npm install
         stage('Install NodeJS Dependencies') {
             agent {
-                docker {
-                    image 'node:16'
-                    args '-u root:root'
-                }
+                docker { image 'node:16'; args '-u root:root' }
             }
             steps {
                 echo "=== Installing NodeJS Dependencies ==="
-                sh 'npm install --save'
+                sh 'npm install --save | tee install-dependencies.log'
             }
         }
 		
         // Run unit tests (if tests exist, run them, else log "no test found")
         stage('Run unit tests') {
             agent {
-                docker {
-                    image 'node:16'
-                    args '-u root:root'
-                }
+                docker { image 'node:16'; args '-u root:root' }
             }
             steps {
                 echo "=== Running Unit Tests ==="
                 sh '''
                   if [ -f package.json ] && grep -q '"test"' package.json; then
-                    npm test
+                    npm test | tee unit-tests.log
                   else
-                    echo "no test found"
+                    echo "no test found" | tee unit-tests.log
                   fi
                 '''
             }
         }
 
-        // Run security scan using snyk - https://snyk.io
+        // Run security scan using snyk
         stage('Run security scan') {
             agent {
-                docker {
-                    image 'node:16'
-                    args '-u root:root'
-                }
+                docker { image 'node:16'; args '-u root:root' }
             }
             steps {
                 echo "=== Running Security Scan with Snyk ==="
-                sh 'npm install -g snyk@latest' // Install snyk package globally
-                sh 'snyk auth $SNYK_TOKEN'      // SNYK_TOKEN stored in Jenkins credentials
-                sh 'snyk test --severity-threshold=high || true' // Fail on high/critical issues, but still log results
+                sh 'npm install -g snyk@latest | tee snyk-install.log'
+                sh 'snyk auth $SNYK_TOKEN | tee snyk-auth.log'
+                sh 'snyk test --severity-threshold=high || true | tee snyk-test.log'
             }
         }
    
         // Build and push docker image to Docker Hub
         stage('Build Docker Image and Push to Dockerhub') {
             agent {
-                docker {
-                    image 'docker:24'
-                    args '--privileged -v /var/run/docker.sock:/var/run/docker.sock'
-                }
+                docker { image 'docker:24'; args '--privileged -v /var/run/docker.sock:/var/run/docker.sock' }
             }
             steps {
-                echo "=== Building and Pushing Docker Image ==="
-                sh 'docker build -t $DOCKER_HUB_USER/$IMAGE_NAME:$TAG .'
-                sh 'echo $DOCKER_HUB_PASSWORD | docker login -u $DOCKER_HUB_USER --password-stdin'
-                sh 'docker push $DOCKER_HUB_USER/$IMAGE_NAME:$TAG'
+                echo "=== Building Docker Image ==="
+                sh 'docker build -t $DOCKER_HUB_USER/$IMAGE_NAME:$TAG . | tee docker-build.log'
+                echo "=== Logging into Docker Hub ==="
+                sh 'echo $DOCKER_HUB_PASSWORD | docker login -u $DOCKER_HUB_USER --password-stdin | tee docker-login.log'
+                echo "=== Pushing Docker Image ==="
+                sh 'docker push $DOCKER_HUB_USER/$IMAGE_NAME:$TAG | tee docker-push.log'
             }
         }
     }
     post {
         always {
-            echo "=== Build Complete: Archiving logs and results ==="
+            echo "=== Build Complete: Archiving all logs ==="
             script {
-                node('master') {   // Use the label you added
-                    archiveArtifacts artifacts: '**/*.log', allowEmptyArchive: true
+                node('master') {
+                    // Archive all logs from all stages
+                    archiveArtifacts artifacts: '*.log', allowEmptyArchive: true
                 }
             }
         }
