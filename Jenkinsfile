@@ -60,11 +60,11 @@ pipeline {
             }
             steps {
                 echo "=== Building Docker Image ==="
-                sh 'docker build -t $DOCKER_HUB_USER/$IMAGE_NAME:$TAG . | tee docker-build.log'
+                sh 'docker build -t $DOCKER_HUB_USER/$IMAGE_NAME:$TAG . 2>&1 | tee docker-build.log'
                 echo "=== Logging into Docker Hub ==="
-                sh 'echo $DOCKER_HUB_PASSWORD | docker login -u $DOCKER_HUB_USER --password-stdin | tee docker-login.log'
+                sh 'echo $DOCKER_HUB_PASSWORD | docker login -u $DOCKER_HUB_USER --password-stdin 2>&1 | tee docker-login.log'
                 echo "=== Pushing Docker Image ==="
-                sh 'docker push $DOCKER_HUB_USER/$IMAGE_NAME:$TAG | tee docker-push.log'
+                sh 'docker push $DOCKER_HUB_USER/$IMAGE_NAME:$TAG 2>&1 | tee docker-push.log'
             }
         }
     }
