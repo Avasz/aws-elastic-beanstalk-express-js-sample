@@ -49,7 +49,7 @@ pipeline {
                 echo "=== Running Security Scan with Snyk ==="
                 sh 'npm install -g snyk@latest | tee snyk-install.log'
                 sh 'snyk auth $SNYK_TOKEN | tee snyk-auth.log'
-                sh 'snyk test --severity-threshold=high || true | tee snyk-test.log'
+                sh 'snyk test --severity-threshold=high | tee snyk-test.log'
             }
         }
    
